@@ -1,6 +1,8 @@
+use std::os::unix::fs::PermissionsExt;
 use std::fs;
 use std::env;
-use std::os::unix::fs::PermissionsExt;
+use std::fs::DirEntry;
+use std::path::PathBuf;
 use colored::*;
 
 /*
@@ -11,26 +13,68 @@ created by nowotx
 
 */
 
-fn main() {
-    let path = env::current_dir().unwrap();
+fn main() { // entry point
+    output(); // call
+}                       
 
-    for i in fs::read_dir(&path).unwrap() {
-        let element = i.unwrap();
-        let file_name_os = element.file_name();
-        let file_name = file_name_os.to_string_lossy();
 
-        if let Ok(metadata) = element.metadata(){
-            if metadata.is_dir(){
-                println!("{}", file_name.white().bold());
-        } else {
-                let permissions = metadata.permissions();
-                let mode = permissions.mode();
-                let is_executable = (mode & 0o111) != 0;  // 0o111 = --x--x--x
+fn read_dir () -> PathBuf { // read dir
+    match env::current_dir() {
+        Ok(path ) => {
+            return path;
+        }
 
-                if is_executable {
-                    println!("{}", file_name.green().bold());
-                }
+        Err(_) => { // if error
+            println!("error");
+            PathBuf::from(".")
         }
     }
 }
-}                       
+
+fn output() { // output function
+    let files = return_files();
+    
+    for entry in files {
+        let filename_os = entry.file_name();
+        let filename = filename_os.to_string_lossy();
+
+        if let Ok(metadata) = entry.metadata() {
+
+            let size = metadata.len();
+
+            if metadata.is_dir() {
+                println!("directory {}", filename.blue().bold());
+            } else {
+                let permissions = metadata.permissions();
+                let mode = permissions.mode();
+                let is_executable = (mode & 0o111) != 0;
+
+                if is_executable {
+                    println!("binary {}", filename.green().bold());
+                } else {
+                    println!("txt {}", filename.white());
+                }
+            }
+        }
+    }
+}
+fn return_files() -> Vec<DirEntry> { // return files
+    let dir_name = read_dir();
+    let mut files = Vec::new();
+    
+    match fs::read_dir(&dir_name) {
+        Ok(entries) => {
+            for entry in entries {
+                match entry {
+                    Ok(entry) => {
+                        files.push(entry);
+                    }
+                    Err(e) => eprintln!("Error reading entry: {}", e),
+                }
+            }
+        }
+        Err(e) => eprintln!("Error reading directory: {}", e),
+    }
+    
+    files
+}
