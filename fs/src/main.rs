@@ -1,5 +1,4 @@
-
-use std::fs::metadata;
+use std::thread;
 use std::os::unix::fs::PermissionsExt;
 use std::fs;
 use std::env;
